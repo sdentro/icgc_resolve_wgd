@@ -1,4 +1,26 @@
-## 
+## Overview
+This script contains a number of heuristics that, when applied to copy number data from different pipelines, aims to determine whether the sample has had a whole genome duplication or not. 
+
+ * Large homozygous deletions
+ * A cluster at 1/2 * CCF of the clonal cluster
+ * Fraction of the genome in odd numbered copy number states when fit as tetraploid
+ 
+Based on these metrics and careful manual curation a couple of cutoffs have been defined. These metrics are applied to each profile individually, resulting in a call:
+
+ * no\_correction
+ * correct\_to\_wgd
+ * correct\_to\_diploid
+ * NA
+
+
+## Output format
+The output of this script first iterates the input correction that it was given. Then it lists for every method what correction should be applied (as listed above), it lists which metrics have been triggered for that sample, the median and uncorrected purities from the input and a consensus purity call.
+
+For now there is no consensus purity call as this bit of the code requires the purity from the DKFZ pipeline, which is not available in the corrent format. The code has been implemented for this feature, but commented out and resides around line 200 of the icgc\_resolve\_wgd.R script.
+
+| samplename   |   input\_broad   |  input\_dkfz   |   input\_mustonen095    |   input\_peifer  |  input\_vanloo\_wedge   |   corrections\_broad    |   corrections\_dkfz  |      corrections\_mustonen095 corrections\_peifer   |   corrections\_vanloo\_wedge    |    metric\_2    |    metric\_3   |     metric\_4   |     metric\_5    |    metric\_6.1   |   metric\_6.2  |    purity\_median |  uncorrected\_purities  |  consensus\_purity |
+|-----|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
+| 003819bc-c415-4e76-887c-931d60ed39e7 |   None  |  None  |  None  |  None  |  None  |  NA    |  NA   |   NA   |   NA   |   NA   |   FALSE  | FALSE  | FALSE |  FALSE |  FALSE  | FALSE |  0.727802739726 | 0.609391638466,0.7104,0.774146,0.745205479452 | NA |
 
 
 ## Required input data
