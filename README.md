@@ -19,6 +19,7 @@ As the original purities and adjustments files did not contain the adjustments f
 
 Expected format (no header):
 
+| | |
 |-----------|-----------|
 | 003819bc-c415-4e76-887c-931d60ed39e7  |  broad=None,dkfz=None,mustonen095=None,peifer=None,vanloo_wedge=None |
 | 00493087-9d9d-40ca-86d5-936f1b951c93  |  broad=None,dkfz=None,mustonen095=None,peifer=None,vanloo_wedge=None |
