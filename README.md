@@ -12,6 +12,13 @@ Based on these metrics and careful manual curation a couple of cutoffs have been
  * correct\_to\_diploid
  * NA
  
+## Run checklist
+ * Jeff runs his adjustment scripts on the raw supplied calls from the different pipelines
+ * Perform clustering on the consensus profiles with adjustment to diploid
+ * Adjust the files / paths at the top of the icgc\_resolve\_wgd.R script to point to the correct location
+ * Run the icgc\_resolve\_wgd.R script
+ * Curation of the output
+ 
 ## Known issues
  * The purities input table does not contain DKFZ output. The script therefore expects a separate file with the adjustments made by Jeffs method.
  * When no existing metrics are triggered and multiple methods call the profile diploid and multiple call it tetraploid there is no solution. These samples will be marked with NAs and need further investigation.
