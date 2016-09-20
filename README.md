@@ -3,7 +3,7 @@ This script contains a number of heuristics that, when applied to copy number da
 
  * Large homozygous deletions
  * A cluster at 1/2 * CCF of the clonal cluster
- * Fraction of the genome in odd numbered copy number states when fit as tetraploid
+ * Fraction of the genome in odd numbered copy number states when fit as tetraploid. These are also known as 50/50 segments after them having a CCF of 0.5 when the profile is fit as diploid
  
 Based on these metrics and careful manual curation a couple of cutoffs have been defined. These metrics are applied to each profile individually, resulting in a call:
 
@@ -11,7 +11,11 @@ Based on these metrics and careful manual curation a couple of cutoffs have been
  * correct\_to\_wgd
  * correct\_to\_diploid
  * NA
-
+ 
+## Known issues
+ * The purities input table does not contain DKFZ output. The script therefore expects a separate file with the adjustments made by Jeffs method.
+ * When no existing metrics are triggered and multiple methods call the profile diploid and multiple call it tetraploid there is no solution. These samples will be marked with NAs and need further investigation.
+ * Metric 4 (50/50 segments) seems to be triggered quite often. Perhaps the threshold needs adjustment.
 
 ## Output format
 The output of this script first iterates the input correction that it was given. Then it lists for every method what correction should be applied (as listed above), it lists which metrics have been triggered for that sample, the median and uncorrected purities from the input and a consensus purity call.
