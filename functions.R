@@ -126,7 +126,7 @@ getClusterMetrics = function(path_prefix, vector_of_samplenames, dat) {
   return(res)
 }
 
-calc_metrics = function(diploid_cnprofile, tetraploid_cnprofile, samplename, clust_locs_table_file) {
+calc_metrics = function(diploid_cnprofile, tetraploid_cnprofile, samplename, clust_locs_table_file, purities) {
   if (file.exists(diploid_cnprofile)) {
     diploid_cnprofile = read.table(diploid_cnprofile, header=T, stringsAsFactors=F)
     

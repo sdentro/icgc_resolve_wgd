@@ -54,7 +54,7 @@ for (samplename in applied_corrections$samplename[is.na(sample_labels)]) {
   diploid_cnprofile = paste0(interim_diploid_prefix, samplename, segments_file_postfix)
   tetraploid_cnprofile = paste0(interim_tetraploid_prefix, samplename, segments_file_postfix)
   
-  metrics = calc_metrics(diploid_cnprofile, tetraploid_cnprofile, samplename, paste0(dpclust_prefix, samplename, dpclust_postfix))
+  metrics = calc_metrics(diploid_cnprofile, tetraploid_cnprofile, samplename, paste0(dpclust_prefix, samplename, dpclust_postfix, purities))
   all_metrics = rbind(all_metrics, metrics)
 }
 
