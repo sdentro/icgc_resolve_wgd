@@ -143,7 +143,7 @@ for (samplename in remain[dkfz_only | clonehd_only,]$samplename) {
 #############################################################
 # Save the output
 #############################################################
-View(applied_corrections[is.na(sample_labels),])
+# View(applied_corrections[is.na(sample_labels),])
 
 samples_to_be_corrected_wgd = !is.na(sample_labels) & sample_labels=="correct_to_wgd" #& sample_labels!="no_correction"
 samples_to_be_corrected_diploid = !is.na(sample_labels) & sample_labels=="correct_to_diploid"
