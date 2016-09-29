@@ -27,23 +27,21 @@
 
 createPng = function(p, filename, height, width) { png(filename=filename, height=height, width=width); print(p); dev.off() }
 
-parseAppliedCorrections = function(corrections_file) {
-  dat = read.table(corrections_file, header=F, stringsAsFactors=F)
+parseAppliedCorrections = function(corrections_file, known_methods=c("broad","dkfz","mustonen095","peifer","vanloo_wedge"), method_names_column=2, method_corr_column=5) {
+  dat = read.table(corrections_file, header=T, stringsAsFactors=F)
   
-  known_methods = c("broad","dkfz","mustonen095","peifer","vanloo_wedge")
   corrections = data.frame(matrix(NA, ncol=length(known_methods), nrow=nrow(dat)))
   colnames(corrections) = known_methods
   
   for (i in 1:nrow(dat)) {
     if (i %% 100 == 0) { print(paste0(i, " / ", nrow(dat))) }
-    entries = dat[i,2]
+    entries = dat[i,method_names_column]
     entries = unlist(strsplit(entries, ","))
+    curr_corrections = unlist(strsplit(dat[i,method_corr_column], ","))
     
-    splitEntry = function(entry, known_methods) { s = unlist(strsplit(item, "=")); return(list(column=which(known_methods==s[1]), value=s[2])) }
-    
-    for (item in entries) {
-      r = splitEntry(item, known_methods)
-      corrections[i, r$column] = r$value
+    indices = match(entries, colnames(corrections))
+    for (j in 1:length(indices)) {
+      corrections[i,indices[j]] = curr_corrections[j]
     }
   }
   
@@ -76,12 +74,12 @@ parseAppliedCorrections = function(corrections_file) {
 # }
 
 #' Check for no cluster between 1 and 0.5 cluster
-getClusterMetricsSample = function(filename, samplename, purities) {
+getClusterMetricsSample = function(filename, samplename, purity) {
   
   if (file.exists(filename)) {
     
     clusters = readr::read_tsv(filename)
-    clusters$ccf = clusters$proportion / purities[purities$tumor==samplename, "purity_consensus"]
+    clusters$ccf = clusters$proportion / purity
     clonal = which.min(abs(clusters$ccf - 1))
     
     dist_to_halve = abs(clusters$ccf - (clusters$ccf[clonal] * 0.5))
@@ -144,7 +142,7 @@ calc_metrics = function(diploid_cnprofile, tetraploid_cnprofile, samplename, clu
   
   
   # Get 0.5*CCF metrics
-  clustering_metrics = getClusterMetricsSample(clust_locs_table_file, samplename, purities)
+  clustering_metrics = getClusterMetricsSample(clust_locs_table_file, samplename, purities[purities$samplename==samplename, "purity"])
   
   
   if (file.exists(tetraploid_cnprofile)) {
@@ -188,3 +186,12 @@ parseReplicationTimingData = function() {
   normalR2 = read.table("broad_replication_timing_2016_06/Normals of CORR_COEFF_2.tsv", header=T, stringsAsFactors=F)
   return(list(tumourR2=tumourR2, normalR2=normalR2))
 }
+
+
+calcPurityPloidy = function(refMajor, refMinor, refBAF, LogRref, gamma_param=1) {
+  rho = (2*refBAF-1)/(2*refBAF-refBAF*(refMajor+refMinor)-1+refMajor)
+  psi = (rho*(refMajor+refMinor)+2-2*rho)/(2^(LogRref/gamma_param))
+  psit = (psi-2*(1-rho))/rho
+  return(list(purity=rho, ploidy=psit))
+}
+

@@ -1,24 +1,26 @@
 library(readr)
+library(GenomicRanges)
 source("~/repo/icgc_resolve_wgd/functions.R")
 
 #############################################################
 # Init
 #############################################################
-setwd("/Users/sd11/Documents/Projects/icgc/consensus_SNVs/assessment_consCNA_through_consSNV_6")
+# setwd("/Users/sd11/Documents/Projects/icgc/consensus_SNVs/assessment_consCNA_through_consSNV_6")
+setwd("/Users/sd11/Documents/Projects/icgc/consensus_clonal_copynumber/201609/")
 
 output_file = "icgc_copynumber_wgd_adjustments.txt"
-purities_file = "interim_consensus/consensus_purities.20160319.txt"
-corrections_file = "applied_corrections_gt30_agreement.txt"
+purities_file = "interim_consensus/icgc_consensus_dp_master_file.txt" # file in summary table format
+corrections_file = "interim_consensus/correction_summary.20160923.txt"
 hum_genome_mb = 3235
 
 # Jeffs interim consensus files
-interim_diploid_prefix = "interim_consensus/clonal_consensus_001/"
+interim_diploid_prefix = "interim_consensus/consensus.best_correction_combo_thresh3/"
 interim_tetraploid_prefix = "interim_consensus/consensus.discard_diploid/"
-segments_file_postfix = "_segments.txt"
+segments_file_postfix = "_segments.txt" # files in calibration format
 
 # DPClust files
 dpclust_prefix = "dpclust_clust_locs/"
-dpclust_postfix = "_subclonal_structure.txt.gz"
+dpclust_postfix = "_subclonal_structure.txt.gz" # files in calibration format
 
 # purities = load_purites_adjustments(purities_file)
 applied_corrections = parseAppliedCorrections(corrections_file)
@@ -27,6 +29,7 @@ applied_corrections = parseAppliedCorrections(corrections_file)
 sample_labels = rep(NA, nrow(applied_corrections))
 
 # Thresholds for various metrics
+CONSENSUS_PROPORTION = 0.3 # Fraction of the genome agreed upon between methods
 LARGEST_HOM_DEL_ALLOWED_METRIC = 10 # in Mb
 CLUSTER_0.5CCF_CLONAL_ALLOWED_SITANCE = 0.02 # in frcation of CCF
 LARGEST_50_50_SUBCLONAL_SEGMENT_ALLOWED = 20 # in Mb
@@ -54,7 +57,7 @@ for (samplename in applied_corrections$samplename[is.na(sample_labels)]) {
   diploid_cnprofile = paste0(interim_diploid_prefix, samplename, segments_file_postfix)
   tetraploid_cnprofile = paste0(interim_tetraploid_prefix, samplename, segments_file_postfix)
   
-  metrics = calc_metrics(diploid_cnprofile, tetraploid_cnprofile, samplename, paste0(dpclust_prefix, samplename, dpclust_postfix, purities, hum_genome_mb))
+  metrics = calc_metrics(diploid_cnprofile, tetraploid_cnprofile, samplename, paste0(dpclust_prefix, samplename, dpclust_postfix), purities, hum_genome_mb)
   all_metrics = rbind(all_metrics, metrics)
 }
 
@@ -188,34 +191,58 @@ triggered_metrics$metric_5 = applied_corrections$samplename %in% metric5_samplen
 triggered_metrics$metric_6.1 = applied_corrections$samplename %in% metric61_samplenames
 triggered_metrics$metric_6.2 = applied_corrections$samplename %in% metric62_samplenames
 
-matches = match(applied_corrections$samplename, purities$tumor)
-consensus_purities = purities[matches, c("tumor", "purity_median", "uncorrected_purities")]
 
-# Adjust to tetraploid take the median of all corrected cases
-consensus_purities$consensus_purity = NA
 
-# TODO: This code does not yet work with the current adjustment table
-# adjust_to_wgd = applied_corrections$samplename[!is.na(sample_labels) & sample_labels=="correct_to_wgd"]
-# # samplename = "fc95d5ce-6899-62f1-e040-11ac0c486011"
-# for (samplename in adjust_to_wgd) {
-#   sample_corrections = applied_corrections[applied_corrections$samplename==samplename, grepl("input", colnames(applied_corrections))]
-#   uncorrected_purities_index = which(!is.na(sample_corrections) & sample_corrections!="None")
-#   uncorrected_purities = as.numeric(unlist(strsplit(purities[purities$tumor==samplename, c("uncorrected_purities")], ",")))
-#   consensus_purities$consensus_purity[consensus_purities$tumor==samplename] = median(uncorrected_purities[uncorrected_purities_index])
-# }
-# 
-# adjust_to_diploid = applied_corrections$samplename[!is.na(sample_labels) & sample_labels=="correct_to_diploid"]
-# # samplename = adjust_to_diploid[1]
-# for (samplename in adjust_to_diploid) {
-#   sample_corrections = applied_corrections[applied_corrections$samplename==samplename, grepl("input", colnames(applied_corrections))]
-#   uncorrected_purities_index = which(!is.na(sample_corrections) & sample_corrections=="None")
-#   uncorrected_purities = as.numeric(unlist(strsplit(purities[purities$tumor==samplename, c("uncorrected_purities")], ",")))
-#   consensus_purities$consensus_purity[consensus_purities$tumor==samplename] = median(uncorrected_purities[uncorrected_purities_index])
-# }
-consensus_purities = consensus_purities[match(consensus_purities$tumor, applied_corrections$samplename),]
-consensus_purities = consensus_purities[,colnames(consensus_purities)!="tumor"]
-output = data.frame(applied_corrections, triggered_metrics, consensus_purities)
+applied_corrections$consensus_purity = NA
+applied_corrections$consensus_ploidy = NA
+consensus_proportion = read.table(corrections_file, header=T, stringsAsFactors=F)$consensus_proportion
+for (samplename in applied_corrections$samplename) {
+  sample_index = which(applied_corrections$samplename==samplename)
+  vlw_input_correction = applied_corrections[sample_index, "input_vanloo_wedge"]
+  vlw_output_correction = applied_corrections[sample_index, "corrections_vanloo_wedge"]
+  if (is.na(vlw_input_correction) | consensus_proportion[sample_index] < CONSENSUS_PROPORTION) {
+    # Currently no way to calculate the hint as there is no Battenberg output
+    next
+  }
+  else if (is.na(vlw_output_correction)) {
+    # take Battenberg solution as hint - if there is one
+    if (sum(purities$samplename==samplename) > 0) {
+      applied_corrections$consensus_purity[sample_index] = purities[purities$samplename==samplename, "purity"]
+      applied_corrections$consensus_ploidy[sample_index] = purities[purities$samplename==samplename, "ploidy"]
+    }
+  } else {
+    # Battenberg corrected, so adjust the purity/ploidy
+    # read in the baflogr and the segments of the tetraploid consensus
+    baf_file = paste0("battenberg_baf_logr/", samplename, "_baflogr.txt.gz")
+    segments_file = paste0(interim_tetraploid_prefix, "/", samplename, "_segments.txt")
+    
+    if (file.exists(segments_file) & file.exists(baf_file)) {
+      baflogr = makeGRangesFromDataFrame(read.table(baf_file, header=T, stringsAsFactors=F), keep.extra.columns=T)
+      segments = makeGRangesFromDataFrame(read.table(segments_file, header=T, stringsAsFactors=F), keep.extra.columns=T)
+      segments$size = end(segments)-start(segments)
+      largest_segment = which.max(segments$size)
+      
+      # Obtain the BAF/logR of the largest segment
+      overlap = findOverlaps(segments[largest_segment,], baflogr)
+      max_overlap = which.max(width(intersect(segments[largest_segment,], baflogr[subjectHits(overlap),])))
+      segment_baf = as.data.frame(baflogr[subjectHits(overlap)[max_overlap],])$baf
+      segment_logr = as.data.frame(baflogr[subjectHits(overlap)[max_overlap],])$logr
+  
+      # Calculate the purity and ploidy
+      purity_ploidy = calcPurityPloidy(as.data.frame(segments[largest_segment,])$major_cn, 
+                                       as.data.frame(segments[largest_segment,])$minor_cn, 
+                                       segment_baf, 
+                                       segment_logr)
+      
+      applied_corrections$consensus_purity[sample_index] = purity_ploidy$purity
+      applied_corrections$consensus_ploidy[sample_index] = purity_ploidy$ploidy
+    } else {
+      print(paste0("No baflogr or segments found for ", samplename))
+    }
+  }
+}
 
+output = data.frame(applied_corrections, triggered_metrics)
 write.table(output, file=output_file, row.names=F, quote=F, sep="\t")
 
 
