@@ -156,8 +156,8 @@ calc_metrics = function(diploid_cnprofile, tetraploid_cnprofile, samplename, clu
                             total_genome=sum(odd_segs$seg_length),
                             frac_rep_genome=sum(odd_segs$seg_length)/sum(tetraploid_cnprofile$seg_length),
                             frac_genome=sum(odd_segs$seg_length)/hum_genome_mb,
-                            total_five_largest=sum(five_largest),
-                            avg_five_largest=mean(five_largest))
+                            total_five_largest=sum(five_largest, na.rm=T),
+                            avg_five_largest=mean(five_largest, na.rm=T))
   } else {
     tetra_cons = data.frame(largest_segment=NA,
                             total_genome=NA,
@@ -193,5 +193,29 @@ calcPurityPloidy = function(refMajor, refMinor, refBAF, LogRref, gamma_param=1) 
   psi = (rho*(refMajor+refMinor)+2-2*rho)/(2^(LogRref/gamma_param))
   psit = (psi-2*(1-rho))/rho
   return(list(purity=rho, ploidy=psit))
+}
+
+#' Get a vector of booleans denoting whether a sample has been corrected for this method only
+get_method_uniq_adjustments = function(remain, method_index, other_methods_index) {
+  method_only = rep(F, nrow(remain))
+  for (i in 1:nrow(remain)) {
+    single_method_remaining = remain[i, method_index]!="None"
+    other_methods = remain[i,other_methods_index]
+    
+    method_only[i] = (single_method_remaining & all(other_methods[!is.na(other_methods)]=="None"))
+  }
+  return(method_only)
+}
+
+#' Helper function to see how many samples are covered by a solution
+get_samplenames_with_no_solution = function(all_metrics, applied_corrections, sample_labels) {
+  samplenames_todo = c()
+  for (i in 1:nrow(all_metrics)) {
+    index = which(applied_corrections$samplename==as.character(all_metrics$samplename[i]))
+    if (is.na(sample_labels[index])) {
+      samplenames_todo = c(samplenames_todo, as.character(all_metrics$samplename[i]))
+    }
+  }
+  return(samplenames_todo)
 }
 
